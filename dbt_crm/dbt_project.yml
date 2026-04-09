@@ -1,0 +1,15 @@
+name: 'crm_project'
+version: '1.0.0'
+config-version: 2
+
+profile: 'crm_project'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+
+models:
+  crm_project:
+    +materialized: table

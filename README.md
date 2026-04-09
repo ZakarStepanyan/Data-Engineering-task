@@ -23,7 +23,7 @@ This project implements a robust, automated data pipeline that migrates CRM data
 
 ## Setup:
 
-Please create .env file on your side based on env.example (just to follow best practice)
+### Please create .env file on your side based on env.example (just to follow best practice)
 
 Force a clean build without cache to ensure all system dependencies are installed
 - docker-compose build --no-cache

@@ -1,0 +1,69 @@
+version: 2
+
+sources:
+  - name: crm_source
+    description: "Raw landing zone for CRM CSV files ingested via Airflow"
+    database: crm_raw
+
+    tables:
+      - name: activity
+      - name: activity_types
+      - name: deal_changes
+      - name: fields
+      - name: stages
+      - name: users
+
+models:
+  - name: stg_activities
+    description: "Cleaned activity logs including calls and meetings"
+    columns:
+      - name: activity_id
+        tests:
+          - not_null
+      - name: user_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_users')
+              field: user_id
+
+  - name: stg_activity_types
+    description: "Lookup table for activity categories (e.g., Sales Call, Follow Up)"
+    columns:
+      - name: activity_type_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_deal_changes
+    description: "Event log of changes made to deals (EAV format)"
+    columns:
+      - name: deal_id
+        tests:
+          - not_null
+
+  - name: stg_fields
+    description: "Definitions of custom fields and JSON options"
+    columns:
+      - name: id
+        tests:
+          - not_null
+
+  - name: stg_stages
+    description: "Sales pipeline stage definitions"
+    columns:
+      - name: stage_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_users
+    description: "Table of sales representatives and CRM users"
+    columns:
+      - name: user_id
+        tests:
+          - unique
+          - not_null
+      - name: email
+        tests:
+          - not_null

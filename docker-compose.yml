@@ -1,0 +1,96 @@
+services:
+  # 1. AIRFLOW METADATA DATABASE (The Brain)
+  postgres:
+    image: postgres:13
+    container_name: crm_postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. DATA WAREHOUSE (The Target)
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: crm_clickhouse
+    environment:
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
+    volumes:
+      - ch_data:/var/lib/clickhouse
+      - ./scripts/init_raw_tables.sql:/docker-entrypoint-initdb.d/init_raw_tables.sql
+    ports:
+      - "8123:8123"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 3. AIRFLOW WEB UI
+  airflow-webserver:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    container_name: crm_airflow_web
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    environment:
+        # Pass ClickHouse creds to Airflow so dbt can use them
+      - CH_USER=${CLICKHOUSE_USER}
+      - CH_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CH_HOST=${CLICKHOUSE_HOST}
+      - CH_PORT=${CLICKHOUSE_PORT}
+      - AIRFLOW__CORE__EXECUTOR=${AIRFLOW__CORE__EXECUTOR}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW_SECRET_KEY}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+      - ./dbt_crm:/opt/airflow/dbt_crm
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "airflow db migrate && 
+               airflow users create --username admin --firstname admin --lastname admin --role Admin --email admin@example.com --password admin && 
+               airflow webserver"
+
+  # 4. AIRFLOW SCHEDULER
+  airflow-scheduler:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    container_name: crm_airflow_scheduler
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow_pass@postgres/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW_SECRET_KEY}
+      - CH_USER=${CLICKHOUSE_USER}
+      - CH_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CH_HOST=${CLICKHOUSE_HOST}
+      - CH_PORT=${CLICKHOUSE_PORT}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+      - ./dbt_crm:/opt/airflow/dbt_crm
+    command: "airflow scheduler"
+
+volumes:
+  ch_data:

@@ -1,0 +1,10 @@
+# Protobuf pinned to avoid the Airflow/dbt compatibility conflict
+protobuf<5.0.0
+
+# Core Data Engineering Stack
+pandas
+clickhouse-connect
+
+# dbt Stack
+dbt-core
+dbt-clickhouse

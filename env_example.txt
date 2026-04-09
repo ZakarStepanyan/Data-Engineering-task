@@ -1,0 +1,17 @@
+# --- Postgres (Airflow Metadata DB) ---
+POSTGRES_USER=airflow
+POSTGRES_PASSWORD=airflow_pass
+POSTGRES_DB=airflow
+
+# --- ClickHouse (Data Warehouse) ---
+CLICKHOUSE_USER=default
+CLICKHOUSE_PASSWORD=admin_password
+CLICKHOUSE_DB=crm_raw
+CLICKHOUSE_HOST=crm_clickhouse
+CLICKHOUSE_PORT=8123
+
+# --- Airflow Core ---
+# This ensures we use the LocalExecutor for parallel dbt runs
+AIRFLOW__CORE__EXECUTOR=LocalExecutor
+AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+AIRFLOW_SECRET_KEY=super-secret-key-123
